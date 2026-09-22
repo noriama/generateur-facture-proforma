@@ -3,15 +3,18 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import InvoiceForm from '../components/InvoiceForm';
 import { InvoiceData } from '../types/invoice';
 
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter() {
+    return {
+      push: jest.fn(),
+    };
+  },
+}));
+
 describe('InvoiceForm Calculation Logic', () => {
   const initialData: InvoiceData = {
     client: { name: '', contact: '', address: '', country: '' },
-    details: { proformaNumber: '', issueDate: '', expiryDate: '', paymentTerms: '' },
-    sender: {
-      name: '', contactName: '', address: '', email: '', ifu: '', rccm: '',
-      moov: { accountName: '', accountNumber: '' },
-      mtn: { accountName: '', accountNumber: '' }
-    },
     items: [
       { id: '1', date: '2023-01-01', description: 'Item 1', quantity: 2, unitPrice: 100, discount: 20 },
       { id: '2', date: '2023-01-01', description: 'Item 2', quantity: 1, unitPrice: 50, discount: 0 }
