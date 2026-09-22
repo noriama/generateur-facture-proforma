@@ -1,6 +1,7 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { InvoiceData } from '../types/invoice';
+import { addDays, format } from 'date-fns';
 
 // Register fonts if needed, using standard fonts for now
 Font.register({
@@ -128,14 +129,14 @@ const styles = StyleSheet.create({
   colQty: { width: '10%', textAlign: 'center' },
   colPrice: { width: '10%', textAlign: 'right' },
   colDiscount: { width: '10%', textAlign: 'right' },
-  colTotalRow: { width: '15%', textAlign: 'right', fontWeight: 700 },
   colTotalRowBg: {
     width: '15%',
     backgroundColor: '#000',
     color: '#fff',
     padding: 8,
     textAlign: 'center',
-    borderRadius: 4
+    borderRadius: 4,
+    marginLeft: 'auto'
   },
   totalSection: {
     flexDirection: 'row',
@@ -218,19 +219,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
-  footerLogo: {
-    width: 20,
-    height: 20,
-    marginRight: 10
-  },
   footerText: {
     fontSize: 9,
     color: '#666'
   }
 });
 
-const formatNumber = (num: number) => {
-  return num.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const formatNumberXAF = (num: number) => {
+  if (num === 0) return '0';
+  // Use dots for thousands separator without decimals, exactly like "XAF 25.000"
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
 interface Props {
@@ -240,6 +238,11 @@ interface Props {
 export const InvoicePDF: React.FC<Props> = ({ data }) => {
   const totalAmount = data.items.reduce((acc, item) => acc + (item.quantity * item.unitPrice) - item.discount, 0);
 
+  const today = new Date();
+  const issueDateFormatted = format(today, 'dd/MM/yyyy');
+  const expiryDateFormatted = format(addDays(today, 7), 'dd/MM/yyyy');
+  const proformaNumber = `NB${format(today, 'ddMMyy')}`;
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -248,10 +251,11 @@ export const InvoicePDF: React.FC<Props> = ({ data }) => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.title}>Proforma</Text>
-            <Text style={styles.subtitle}>{data.sender.name} - {data.sender.contactName}</Text>
+            <Text style={styles.subtitle}>Mariano HONVOU - Hnvgraphity</Text>
             <View style={{ marginTop: 10 }}>
-              <Text style={styles.contactInfo}>{data.sender.address}</Text>
-              <Text style={styles.contactInfo}>{data.sender.email}</Text>
+              <Text style={styles.contactInfo}>Porto-Novo / Bénin</Text>
+              <Text style={styles.contactInfo}>Koutongbé, St Benoit</Text>
+              <Text style={styles.contactInfo}>mhonvou2003@gmail.com</Text>
             </View>
           </View>
           <View>
@@ -283,19 +287,19 @@ export const InvoicePDF: React.FC<Props> = ({ data }) => {
           <View style={styles.detailsBoxContainer}>
             <View style={styles.detailBox}>
               <Text style={styles.detailLabel}>Date de proforma :</Text>
-              <Text>{data.details.issueDate}</Text>
+              <Text>{issueDateFormatted}</Text>
             </View>
             <View style={styles.detailBox}>
               <Text style={styles.detailLabel}>Date D'expiration :</Text>
-              <Text>{data.details.expiryDate}</Text>
+              <Text>{expiryDateFormatted}</Text>
             </View>
             <View style={styles.detailBox}>
               <Text style={styles.detailLabel}>No Proforma :</Text>
-              <Text>{data.details.proformaNumber}</Text>
+              <Text>{proformaNumber}</Text>
             </View>
             <View style={styles.detailBox}>
               <Text style={styles.detailLabel}>Termes de paiement :</Text>
-              <Text>{data.details.paymentTerms}</Text>
+              <Text>07 Jours</Text>
             </View>
           </View>
         </View>
@@ -313,15 +317,21 @@ export const InvoicePDF: React.FC<Props> = ({ data }) => {
 
           {data.items.map((item, index) => {
             const amount = (item.quantity * item.unitPrice) - item.discount;
+            // Format dates slightly if it's YYYY-MM-DD
+            const itemDateParts = item.date.split('-');
+            const itemDateFormatted = itemDateParts.length === 3
+                ? `${itemDateParts[2]}/${itemDateParts[1]}/${itemDateParts[0]}`
+                : item.date;
+
             return (
               <View key={item.id} style={index % 2 === 0 ? styles.tableRowAlternate : styles.tableRow}>
-                <Text style={styles.colDate}>{item.date}</Text>
+                <Text style={styles.colDate}>{itemDateFormatted}</Text>
                 <Text style={styles.colDesc}>{item.description}</Text>
-                <Text style={styles.colQty}>0{item.quantity}</Text>
-                <Text style={styles.colPrice}>{formatNumber(item.unitPrice)}</Text>
-                <Text style={styles.colDiscount}>{formatNumber(item.discount)}</Text>
+                <Text style={styles.colQty}>{item.quantity.toString().padStart(2, '0')}</Text>
+                <Text style={styles.colPrice}>{formatNumberXAF(item.unitPrice)}</Text>
+                <Text style={styles.colDiscount}>{item.discount === 0 ? "0.000" : formatNumberXAF(item.discount)}</Text>
                 <View style={styles.colTotalRowBg}>
-                  <Text>XAF {formatNumber(amount)}</Text>
+                  <Text>XAF {formatNumberXAF(amount)}</Text>
                 </View>
               </View>
             );
@@ -332,7 +342,7 @@ export const InvoicePDF: React.FC<Props> = ({ data }) => {
         <View style={styles.totalSection}>
           <Text style={styles.totalLabel}>Total :</Text>
           <View style={styles.totalBox}>
-            <Text>XAF {formatNumber(totalAmount).replace(',000', '.000')}</Text>
+            <Text>XAF {formatNumberXAF(totalAmount)}</Text>
           </View>
         </View>
 
@@ -360,22 +370,21 @@ export const InvoicePDF: React.FC<Props> = ({ data }) => {
           <View style={styles.paymentBox}>
              <Text style={styles.paymentTitle}>Détails de paiement - BENIN :</Text>
              <Text style={styles.paymentNetwork}>MOOV MONEY</Text>
-             <Text>Noms du compte: {data.sender.moov.accountName}</Text>
-             <Text>Numéro du compte : {data.sender.moov.accountNumber}</Text>
+             <Text>Noms du compte: Honvou J. C. Mariano</Text>
+             <Text>Numéro du compte : (+229) 0155486481</Text>
           </View>
           <View style={styles.paymentBox}>
              <Text style={styles.paymentTitle}> </Text>
              <Text style={styles.paymentNetworkMtn}>MTN MOBILE MONEY</Text>
-             <Text>Noms du compte: {data.sender.mtn.accountName}</Text>
-             <Text>Numéro du compte: {data.sender.mtn.accountNumber}</Text>
+             <Text>Noms du compte: Honvou J. C. Mariano</Text>
+             <Text>Numéro du compte: (+229) 0162208437</Text>
           </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          {/* We'll skip image here if Logo isn't strictly necessary, or put text instead */}
-          <Text style={styles.footerText}>{data.sender.name} by {data.sender.contactName}</Text>
-          <Text style={{ ...styles.footerText, marginLeft: 10 }}>IFU: {data.sender.ifu} | RCCM: {data.sender.rccm}</Text>
+          <Text style={styles.footerText}>Christ-Roi Mariano HONVOU by Hnvgraphity</Text>
+          <Text style={{ ...styles.footerText, marginLeft: 10 }}>IFU: 0202240881807 | RCCM: RB/PNO/21 A 22754</Text>
         </View>
 
       </Page>

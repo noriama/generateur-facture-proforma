@@ -14,33 +14,7 @@ export interface ClientInfo {
   country: string;
 }
 
-export interface InvoiceDetails {
-  proformaNumber: string;
-  issueDate: string;
-  expiryDate: string;
-  paymentTerms: string;
-}
-
-export interface SenderInfo {
-  name: string;
-  contactName: string;
-  address: string;
-  email: string;
-  ifu: string;
-  rccm: string;
-  moov: {
-    accountName: string;
-    accountNumber: string;
-  };
-  mtn: {
-    accountName: string;
-    accountNumber: string;
-  };
-}
-
 export interface InvoiceData {
   client: ClientInfo;
-  details: InvoiceDetails;
   items: InvoiceItem[];
-  sender: SenderInfo;
 }
